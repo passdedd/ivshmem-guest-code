@@ -14,7 +14,6 @@
 #include <linux/module.h>
 #include <linux/pci.h>
 #include <linux/proc_fs.h>
-#include <linux/smp_lock.h>
 #include <asm/uaccess.h>
 #include <linux/interrupt.h>
 #include <linux/mutex.h>
@@ -75,7 +74,7 @@ static const struct file_operations kvm_ivshmem_ops = {
 	.open	= kvm_ivshmem_open,
 	.mmap	= kvm_ivshmem_mmap,
 	.read	= kvm_ivshmem_read,
-	.ioctl   = kvm_ivshmem_ioctl,
+//	.ioctl   = kvm_ivshmem_ioctl,
 	.write   = kvm_ivshmem_write,
 	.llseek  = kvm_ivshmem_lseek,
 	.release = kvm_ivshmem_release,
@@ -279,8 +278,7 @@ static int request_msix_vectors(struct kvm_ivshmem_device *ivs_info, int nvector
 	for (i = 0; i < nvectors; ++i)
 		ivs_info->msix_entries[i].entry = i;
 
-	err = pci_enable_msix(ivs_info->dev, ivs_info->msix_entries,
-					ivs_info->nvectors);
+	err = pci_enable_msi(ivs_info->dev);
 	if (err > 0) {
 		printk(KERN_INFO "no MSI. Back to INTx.\n");
 		return -ENOSPC;
@@ -463,7 +461,7 @@ static int kvm_ivshmem_mmap(struct file *filp, struct vm_area_struct * vma)
 	unsigned long off;
 	unsigned long start;
 
-	lock_kernel();
+//	lock_kernel();
 
 	off = vma->vm_pgoff << PAGE_SHIFT;
 	start = kvm_ivshmem_dev.ioaddr;
@@ -475,24 +473,24 @@ static int kvm_ivshmem_mmap(struct file *filp, struct vm_area_struct * vma)
 	printk(KERN_INFO "%lu > %lu\n",(vma->vm_end - vma->vm_start + off), len);
 
 	if ((vma->vm_end - vma->vm_start + off) > len) {
-		unlock_kernel();
+//		unlock_kernel();
 		return -EINVAL;
 	}
 
 	off += start;
 	vma->vm_pgoff = off >> PAGE_SHIFT;
 
-	vma->vm_flags |= VM_SHARED|VM_RESERVED;
+	vma->vm_flags |= VM_SHARED;
 
 	if(io_remap_pfn_range(vma, vma->vm_start,
 		off >> PAGE_SHIFT, vma->vm_end - vma->vm_start,
 		vma->vm_page_prot))
 	{
 		printk("mmap failed\n");
-		unlock_kernel();
+//		unlock_kernel();
 		return -ENXIO;
 	}
-	unlock_kernel();
+//	unlock_kernel();
 
 	return 0;
 }
